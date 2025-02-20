@@ -247,4 +247,8 @@
       <Filter>Tests</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <MASM Include="netbios_jump.asm" />
+    <MASM Include="ksuser_jump.asm" />
+  </ItemGroup>
 </Project>

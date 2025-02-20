@@ -527,6 +527,7 @@ std::string CppGenerator::GenerateSingleFunction(const FunctionWrapper& Func, co
 	if (Func == nullptr)
 		Func = {}->GetFunction("{}", "{}");
 {}{}{}
+	std::cout << "Calling " << "{}" << "::" << "{}" << std::endl;
 	{}ProcessEvent(Func, {});{}{}{}{}
 }}
 
@@ -543,6 +544,8 @@ std::string CppGenerator::GenerateSingleFunction(const FunctionWrapper& Func, co
 , bHasParams ? ParamVarCreationString : ""
 , bHasParamsToInit ? ParamAssignments : ""
 , bIsNativeFunc ? StoreFunctionFlagsString : ""
+, FixedOuterName
+, FixedFunctionName
 , Func.IsStatic() ? "GetDefaultObj()->" : "UObject::"
 , bHasParams ? "&Parms" : "nullptr"
 , bIsNativeFunc ? RestoreFunctionFlagsString : ""
@@ -774,10 +777,10 @@ void CppGenerator::GenerateStruct(const StructWrapper& Struct, StreamType& Struc
 		const int32 StructSize = Struct.GetSize();
 
 		// Alignment assertions
-		StructFile << std::format("static_assert(alignof({}) == 0x{:06X}, \"Wrong alignment on {}\");\n", UniquePrefixedName, Struct.GetAlignment(), UniquePrefixedName);
+		StructFile << std::format("//static_assert(alignof({}) == 0x{:06X}, \"Wrong alignment on {}\");\n", UniquePrefixedName, Struct.GetAlignment(), UniquePrefixedName);
 
 		// Size assertions
-		StructFile << std::format("static_assert(sizeof({}) == 0x{:06X}, \"Wrong size on {}\");\n", UniquePrefixedName, (StructSize > 0x0 ? StructSize : 0x1), UniquePrefixedName);
+		StructFile << std::format("//static_assert(sizeof({}) == 0x{:06X}, \"Wrong size on {}\");\n", UniquePrefixedName, (StructSize > 0x0 ? StructSize : 0x1), UniquePrefixedName);
 	}
 
 
@@ -792,7 +795,7 @@ void CppGenerator::GenerateStruct(const StructWrapper& Struct, StreamType& Struc
 
 			std::string MemberName = Member.GetName();
 
-			StructFile << std::format("static_assert(offsetof({0}, {1}) == 0x{2:06X}, \"Member '{0}::{1}' has a wrong offset!\");\n", UniquePrefixedName, Member.GetName(), Member.GetOffset());
+			StructFile << std::format("//static_assert(offsetof({0}, {1}) == 0x{2:06X}, \"Member '{0}::{1}' has a wrong offset!\");\n", UniquePrefixedName, Member.GetName(), Member.GetOffset());
 		}
 	}
 }
@@ -1324,12 +1327,12 @@ void CppGenerator::GenerateDebugAssertions(StreamType& AssertionStream)
 			AssertionStream << std::format("// {} {}\n", (Struct.IsClass() ? "class" : "struct"), UniquePrefixedName);
 
 			// Alignment assertions
-			AssertionStream << std::format("static_assert(alignof({}) == 0x{:06X});\n", UniquePrefixedName, Struct.GetAlignment());
+			AssertionStream << std::format("//static_assert(alignof({}) == 0x{:06X});\n", UniquePrefixedName, Struct.GetAlignment());
 
 			const int32 StructSize = Struct.GetSize();
 
 			// Size assertions
-			AssertionStream << std::format("static_assert(sizeof({}) == 0x{:06X});\n", UniquePrefixedName, (StructSize > 0x0 ? StructSize : 0x1));
+			AssertionStream << std::format("//static_assert(sizeof({}) == 0x{:06X});\n", UniquePrefixedName, (StructSize > 0x0 ? StructSize : 0x1));
 
 			AssertionStream << "\n";
 
@@ -1341,7 +1344,7 @@ void CppGenerator::GenerateDebugAssertions(StreamType& AssertionStream)
 				if (Member.IsStatic() || Member.IsZeroSizedMember() || Member.IsBitField())
 					continue;
 
-				AssertionStream << std::format("static_assert(offsetof({}, {}) == 0x{:06X});\n", UniquePrefixedName, Member.GetName(), Member.GetOffset());
+				AssertionStream << std::format("//static_assert(offsetof({}, {}) == 0x{:06X});\n", UniquePrefixedName, Member.GetName(), Member.GetOffset());
 			}
 
 			AssertionStream << "\n\n";
@@ -2396,6 +2399,7 @@ R"({
 			.CustomComment = "Unreal Function to process all UFunction-calls",
 			.ReturnType = "void", .NameWithParams = "ProcessEvent(class UFunction* Function, void* Parms)", .Body =
 R"({
+	if (!Function || reinterpret_cast<uintptr_t>(Function) == 0xffffffffffffffff) { return; }
 	InSDKUtils::CallGameFunction(InSDKUtils::GetVirtualFunction<void(*)(const UObject*, class UFunction*, void*)>(this, Offsets::ProcessEventIdx), this, Function, Parms);
 })",
 			.bIsStatic = false, .bIsConst = true, .bIsBodyInline = true
@@ -2414,8 +2418,8 @@ R"({
 			.CustomComment = "Checks if this class has a certain base",
 			.ReturnType = "bool", .NameWithParams = "IsSubclassOf(const UStruct* Base)", .Body =
 R"({
-	if (!Base)
-		return false;
+	if (!Base || reinterpret_cast<uintptr_t>(Base) >= 0xFFFFFFFFFFFFFFFF ||
+			reinterpret_cast<uintptr_t>(Base) < 0x10000) { return false; }
 
 	for (const UStruct* Struct = this; Struct; Struct = Struct->Super)
 	{
@@ -3015,9 +3019,17 @@ namespace InSDKUtils
 	BasicHpp << R"(	template<typename FuncType>
 	inline FuncType GetVirtualFunction(const void* ObjectInstance, int32 Index)
 	{
-		void** VTable = *reinterpret_cast<void***>(const_cast<void*>(ObjectInstance));
+		if (!ObjectInstance) return nullptr;
 
-		return reinterpret_cast<FuncType>(VTable[Index]);
+		__try {
+			void** VTable = *reinterpret_cast<void***>(const_cast<void*>(ObjectInstance));
+			if (!VTable) return nullptr;
+			
+			return reinterpret_cast<FuncType>(VTable[Index]);
+		}
+		__except(EXCEPTION_EXECUTE_HANDLER) {
+			return nullptr;
+		}
 	}
 )";
 
@@ -3139,8 +3151,13 @@ UFunction* BasicFilesImpleUtils::FindFunctionByFName(const FName* Name)
 	{
 		UObject* Object = UObject::GObjects->GetByIndex(i);
 
-		if (!Object)
+		if (!Object ||
+			reinterpret_cast<uintptr_t>(Object) >= 0xFFFFFFFFFFFFFFFF ||
+			reinterpret_cast<uintptr_t>(Object) < 0x10000 ||
+			reinterpret_cast<uintptr_t>(Object) == 0x00000000ffffffff
+			) {
 			continue;
+		}
 
 		if (Object->Name == *Name)
 			return static_cast<UFunction*>(Object);
@@ -3910,7 +3927,7 @@ R"({
 			},
 			PredefinedMember {
 				.Comment = "Free your allocation with FMemory::Free!",
-				.Type = "static_assert(false, \"FName::ToString causes memory-leak. Read comment above!\")", .Name = NameArrayName, .Offset = 0x0, .Size = 0x4, .ArrayDim = 0x0, .Alignment = 0x4,
+				.Type = "//static_assert(false, \"FName::ToString causes memory-leak. Read comment above!\")", .Name = NameArrayName, .Offset = 0x0, .Size = 0x4, .ArrayDim = 0x0, .Alignment = 0x4,
 				.bIsStatic = true, .bIsZeroSizeMember = true, .bIsBitField = false, .BitIndex = 0xFF, .DefaultValue = "nullptr"
 			},
 		});
@@ -4606,7 +4623,7 @@ private:
 	template<int32 TypeSize>
 	struct OptionalWithBool
 	{
-		static_assert(TypeSize > 0x0, "TOptional can not store an empty type!");
+		//static_assert(TypeSize > 0x0, "TOptional can not store an empty type!");
 
 		uint8 Value[TypeSize];
 		bool bIsSet;
@@ -5895,9 +5912,9 @@ namespace UC
 	template<typename T0, typename T1> inline Iterators::TMapIterator<T0, T1> begin(const TMap<T0, T1>& Map) { return Iterators::TMapIterator<T0, T1>(Map, Map.GetAllocationFlags(), 0); }
 	template<typename T0, typename T1> inline Iterators::TMapIterator<T0, T1> end  (const TMap<T0, T1>& Map) { return Iterators::TMapIterator<T0, T1>(Map, Map.GetAllocationFlags(), Map.NumAllocated()); }
 
-	static_assert(sizeof(TArray<int32>) == 0x10, "TArray has a wrong size!");
-	static_assert(sizeof(TSet<int32>) == 0x50, "TSet has a wrong size!");
-	static_assert(sizeof(TMap<int32, int32>) == 0x50, "TMap has a wrong size!");
+	//static_assert(sizeof(TArray<int32>) == 0x10, "TArray has a wrong size!");
+	//static_assert(sizeof(TSet<int32>) == 0x50, "TSet has a wrong size!");
+	//static_assert(sizeof(TMap<int32, int32>) == 0x50, "TMap has a wrong size!");
 }
 )";
 

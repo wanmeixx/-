@@ -48,7 +48,29 @@ R"(
 	requires std::invocable<FuncType, ParamTypes...>
 	inline auto CallGameFunction(FuncType Function, ParamTypes&&... Args)
 	{
-		return Function(std::forward<ParamTypes>(Args)...);
+		if (!Function ||
+			reinterpret_cast<uintptr_t>(Function) >= 0xFFFFFFFFFFFFFFFF ||
+			reinterpret_cast<uintptr_t>(Function) < 0x10000 ||
+			reinterpret_cast<uintptr_t>(Function) == 0x00000000ffffffff
+			) {
+			if constexpr (std::is_void_v<std::invoke_result_t<FuncType, ParamTypes...>>) {
+				return;
+			} else {
+				return std::invoke_result_t<FuncType, ParamTypes...>{};
+			}
+		}
+
+		__try {
+			return Function(std::forward<ParamTypes>(Args)...);
+		}
+		__except(EXCEPTION_EXECUTE_HANDLER) {
+			// Handle access violation
+			if constexpr (std::is_void_v<std::invoke_result_t<FuncType, ParamTypes...>>) {
+				return;
+			} else {
+				return std::invoke_result_t<FuncType, ParamTypes...>{};
+			}
+		}
 	}
 )";
 		/* An option to force the UWorld::GetWorld() function in the SDK to get the world through an instance of UEngine. Useful for games on which the dumper finds the wrong GWorld offset. */

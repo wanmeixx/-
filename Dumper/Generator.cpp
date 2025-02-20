@@ -111,11 +111,22 @@ void Generator::InitInternal()
 	PackageManager::PostInit();
 }
 
+// 添加这个辅助函数来生成时间字符串
+std::string GetFormattedDateTime() {
+	auto now = std::chrono::system_clock::now();
+	auto time = std::chrono::system_clock::to_time_t(now);
+	std::tm timeinfo;
+	localtime_s(&timeinfo, &time);
+	std::stringstream ss;
+	ss << std::put_time(&timeinfo, "%Y%m%d_%H%M");
+	return ss.str();
+}
+
 bool Generator::SetupDumperFolder()
 {
 	try
 	{
-		std::string FolderName = (Settings::Generator::GameVersion + '-' + Settings::Generator::GameName);
+		std::string FolderName = (Settings::Generator::GameVersion + '-' + Settings::Generator::GameName) + "_" + GetFormattedDateTime();
 
 		FileNameHelper::MakeValidFileName(FolderName);
 
