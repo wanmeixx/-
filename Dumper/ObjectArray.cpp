@@ -337,7 +337,7 @@ void ObjectArray::Init(bool bScanAllMemory, const char* const ModuleName)
 		return;
 	}
 
-	if (!bScanAllMemory)
+	if (GObjects == nullptr)
 	{
 		std::cout << "\nGObjects couldn't be found!\n\n\n";
 		Sleep(3000);
@@ -510,6 +510,16 @@ static UEType ObjectArray::FindObjectFastInOuter(const std::string& Name, std::s
 	}
 
 	return UEType();
+}
+
+UEStruct ObjectArray::FindStruct(const std::string& Name)
+{
+	return FindObjectFast<UEClass>(Name, EClassCastFlags::Struct);
+}
+
+UEStruct ObjectArray::FindStructFast(const std::string& Name)
+{
+	return FindObjectFast<UEClass>(Name, EClassCastFlags::Struct);
 }
 
 UEClass ObjectArray::FindClass(const std::string& FullName)
