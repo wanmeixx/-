@@ -2341,7 +2341,13 @@ R"({
 			.CustomComment = "Unreal Function to process all UFunction-calls",
 			.ReturnType = "void", .NameWithParams = "ProcessEvent(class UFunction* Function, void* Parms)", .Body =
 R"({
-	InSDKUtils::CallGameFunction(InSDKUtils::GetVirtualFunction<void(*)(const UObject*, class UFunction*, void*)>(this, Offsets::ProcessEventIdx), this, Function, Parms);
+	__try {
+		InSDKUtils::CallGameFunction(InSDKUtils::GetVirtualFunction<void(*)(const UObject*, class UFunction*, void*)>(this, Offsets::ProcessEventIdx), this, Function, Parms);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER) {
+		std::cout << "ProcessEvent Error" << std::endl;
+		return;
+	}
 })",
 			.bIsStatic = false, .bIsConst = true, .bIsBodyInline = true
 		},
