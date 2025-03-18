@@ -235,4 +235,7 @@
       <Filter>Engine\Public\Unreal</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="netbios_jump.asm" />
+  </ItemGroup>
 </Project>
