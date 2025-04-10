@@ -1,3 +1,5 @@
+# 通用方案
+把编译好的version.dll放到游戏exe目录,按F6即可Dumper
 
 # Dumper-7
 
