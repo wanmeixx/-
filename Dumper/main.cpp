@@ -10,6 +10,7 @@
 #include "Generators/DumpspaceGenerator.h"
 
 #include "Generators/Generator.h"
+#include "version.h"
 
 
 enum class EFortToastType : uint8
@@ -89,6 +90,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 	{
 	case DLL_PROCESS_ATTACH:
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)MainThread, hModule, 0, 0);
+		InitHijack();
 		break;
 	}
 

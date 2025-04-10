@@ -1,0 +1,19 @@
+LIBRARY
+EXPORTS
+GetFileVersionInfoA=Redirect_GetFileVersionInfoA @1
+GetFileVersionInfoByHandle=Redirect_GetFileVersionInfoByHandle @2
+GetFileVersionInfoExA=Redirect_GetFileVersionInfoExA @3
+GetFileVersionInfoExW=Redirect_GetFileVersionInfoExW @4
+GetFileVersionInfoSizeA=Redirect_GetFileVersionInfoSizeA @5
+GetFileVersionInfoSizeExA=Redirect_GetFileVersionInfoSizeExA @6
+GetFileVersionInfoSizeExW=Redirect_GetFileVersionInfoSizeExW @7
+GetFileVersionInfoSizeW=Redirect_GetFileVersionInfoSizeW @8
+GetFileVersionInfoW=Redirect_GetFileVersionInfoW @9
+VerFindFileA=Redirect_VerFindFileA @10
+VerFindFileW=Redirect_VerFindFileW @11
+VerInstallFileA=Redirect_VerInstallFileA @12
+VerInstallFileW=Redirect_VerInstallFileW @13
+VerLanguageNameA=Redirect_VerLanguageNameA @14
+VerLanguageNameW=Redirect_VerLanguageNameW @15
+VerQueryValueA=Redirect_VerQueryValueA @16
+VerQueryValueW=Redirect_VerQueryValueW @17
