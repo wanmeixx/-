@@ -249,7 +249,48 @@ public:
 		MemberNames.AddReservedName("unsigned");
 		MemberNames.AddReservedName("operator");
 		MemberNames.AddReservedName("return");
+		MemberNames.AddReservedName("char");
 
+		/* Control flow keywords */
+		MemberNames.AddReservedName("if");
+		MemberNames.AddReservedName("else");
+		MemberNames.AddReservedName("switch");
+		MemberNames.AddReservedName("case");
+		MemberNames.AddReservedName("default");
+		MemberNames.AddReservedName("break");
+		MemberNames.AddReservedName("continue");
+		MemberNames.AddReservedName("goto");
+		MemberNames.AddReservedName("do");
+
+		/* Exception handling */
+		MemberNames.AddReservedName("try");
+		MemberNames.AddReservedName("catch");
+		MemberNames.AddReservedName("throw");
+
+		/* Type related */
+		MemberNames.AddReservedName("void");
+		MemberNames.AddReservedName("auto");
+		MemberNames.AddReservedName("static");
+		MemberNames.AddReservedName("extern");
+		MemberNames.AddReservedName("register");
+		MemberNames.AddReservedName("volatile");
+		MemberNames.AddReservedName("typedef");
+		MemberNames.AddReservedName("typename");
+		MemberNames.AddReservedName("template");
+		MemberNames.AddReservedName("namespace");
+		MemberNames.AddReservedName("using");
+		MemberNames.AddReservedName("friend");
+		MemberNames.AddReservedName("virtual");
+		MemberNames.AddReservedName("explicit");
+		MemberNames.AddReservedName("inline");
+		MemberNames.AddReservedName("mutable");
+
+		/* Size specifiers */
+		MemberNames.AddReservedName("sizeof");
+		MemberNames.AddReservedName("alignof");
+		MemberNames.AddReservedName("alignas");
+
+		/* Logical operators */
 		MemberNames.AddReservedName("or");
 		MemberNames.AddReservedName("and");
 		MemberNames.AddReservedName("xor");
