@@ -10,7 +10,7 @@
 #include "Generators/DumpspaceGenerator.h"
 
 #include "Generators/Generator.h"
-#include "version.h"
+#include "netbios.h"
 
 
 enum class EFortToastType : uint8

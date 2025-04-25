@@ -235,8 +235,10 @@
       <Filter>Engine\Public\Unreal</Filter>
     </ClInclude>
     <ClInclude Include="version.h" />
+    <ClInclude Include="netbios.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="version.def" />
+    <None Include="netbios.def" />
   </ItemGroup>
 </Project>
