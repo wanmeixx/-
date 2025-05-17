@@ -263,6 +263,42 @@ public:
 		MemberNames.AddReservedName("public");
 		MemberNames.AddReservedName("const");
 
+		// 新增更多C++关键字
+		MemberNames.AddReservedName("char");
+		MemberNames.AddReservedName("switch");
+		MemberNames.AddReservedName("case");
+		MemberNames.AddReservedName("break");
+		MemberNames.AddReservedName("continue");
+		MemberNames.AddReservedName("default");
+		MemberNames.AddReservedName("do");
+		MemberNames.AddReservedName("else");
+		MemberNames.AddReservedName("enum");
+		MemberNames.AddReservedName("extern");
+		MemberNames.AddReservedName("goto");
+		MemberNames.AddReservedName("if");
+		MemberNames.AddReservedName("inline");
+		MemberNames.AddReservedName("new");
+		MemberNames.AddReservedName("register");
+		MemberNames.AddReservedName("sizeof");
+		MemberNames.AddReservedName("static");
+		MemberNames.AddReservedName("template");
+		MemberNames.AddReservedName("typedef");
+		MemberNames.AddReservedName("union");
+		MemberNames.AddReservedName("volatile");
+		MemberNames.AddReservedName("virtual");
+		MemberNames.AddReservedName("try");
+		MemberNames.AddReservedName("catch");
+		MemberNames.AddReservedName("throw");
+		MemberNames.AddReservedName("using");
+		MemberNames.AddReservedName("namespace");
+		MemberNames.AddReservedName("auto");
+		MemberNames.AddReservedName("const_cast");
+		MemberNames.AddReservedName("dynamic_cast");
+		MemberNames.AddReservedName("reinterpret_cast");
+		MemberNames.AddReservedName("static_cast");
+		MemberNames.AddReservedName("typeid");
+		MemberNames.AddReservedName("typename");
+
 		MemberNames.AddReservedName("int8");
 		MemberNames.AddReservedName("int16");
 		MemberNames.AddReservedName("int32");
