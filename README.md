@@ -1,6 +1,9 @@
 # 通用方案
 把编译好的version.dll放到游戏exe目录,按F6即可Dumper
 
+#劫持库
+https://github.com/detached64/HijackGen/releases
+
 # Dumper-7
 
 SDK Generator for all Unreal Engine games. Supported versions are all of UE4 and UE5.

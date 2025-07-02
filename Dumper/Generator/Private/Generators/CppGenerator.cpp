@@ -723,10 +723,10 @@ void CppGenerator::GenerateStruct(const StructWrapper& Struct, StreamType& Struc
 		const int32 StructSize = Struct.GetSize();
 
 		// Alignment assertions
-		StructFile << std::format("//static_assert(alignof({}) == 0x{:06X}, \"Wrong alignment on {}\");\n", UniquePrefixedName, Struct.GetAlignment(), UniquePrefixedName);
+		//StructFile << std::format("//static_assert(alignof({}) == 0x{:06X}, \"Wrong alignment on {}\");\n", UniquePrefixedName, Struct.GetAlignment(), UniquePrefixedName);
 
 		// Size assertions
-		StructFile << std::format("//static_assert(sizeof({}) == 0x{:06X}, \"Wrong size on {}\");\n", UniquePrefixedName, (StructSize > 0x0 ? StructSize : 0x1), UniquePrefixedName);
+		//StructFile << std::format("//static_assert(sizeof({}) == 0x{:06X}, \"Wrong size on {}\");\n", UniquePrefixedName, (StructSize > 0x0 ? StructSize : 0x1), UniquePrefixedName);
 	}
 
 
@@ -741,7 +741,7 @@ void CppGenerator::GenerateStruct(const StructWrapper& Struct, StreamType& Struc
 
 			std::string MemberName = Member.GetName();
 
-			StructFile << std::format("//static_assert(offsetof({0}, {1}) == 0x{2:06X}, \"Member '{0}::{1}' has a wrong offset!\");\n", UniquePrefixedName, Member.GetName(), Member.GetOffset());
+			//StructFile << std::format("//static_assert(offsetof({0}, {1}) == 0x{2:06X}, \"Member '{0}::{1}' has a wrong offset!\");\n", UniquePrefixedName, Member.GetName(), Member.GetOffset());
 		}
 	}
 }
@@ -1265,12 +1265,12 @@ void CppGenerator::GenerateDebugAssertions(StreamType& AssertionStream)
 			AssertionStream << std::format("// {} {}\n", (Struct.IsClass() ? "class" : "struct"), UniquePrefixedName);
 
 			// Alignment assertions
-			AssertionStream << std::format("//static_assert(alignof({}) == 0x{:06X});\n", UniquePrefixedName, Struct.GetAlignment());
+			//AssertionStream << std::format("//static_assert(alignof({}) == 0x{:06X});\n", UniquePrefixedName, Struct.GetAlignment());
 
 			const int32 StructSize = Struct.GetSize();
 
 			// Size assertions
-			AssertionStream << std::format("//static_assert(sizeof({}) == 0x{:06X});\n", UniquePrefixedName, (StructSize > 0x0 ? StructSize : 0x1));
+			//AssertionStream << std::format("//static_assert(sizeof({}) == 0x{:06X});\n", UniquePrefixedName, (StructSize > 0x0 ? StructSize : 0x1));
 
 			AssertionStream << "\n";
 
@@ -1282,7 +1282,7 @@ void CppGenerator::GenerateDebugAssertions(StreamType& AssertionStream)
 				if (Member.IsStatic() || Member.IsZeroSizedMember() || Member.IsBitField())
 					continue;
 
-				AssertionStream << std::format("//static_assert(offsetof({}, {}) == 0x{:06X});\n", UniquePrefixedName, Member.GetName(), Member.GetOffset());
+				//AssertionStream << std::format("//static_assert(offsetof({}, {}) == 0x{:06X});\n", UniquePrefixedName, Member.GetName(), Member.GetOffset());
 			}
 
 			AssertionStream << "\n\n";
@@ -3853,7 +3853,7 @@ R"({
 			},
 			PredefinedMember {
 				.Comment = "Free your allocation with FMemory::Free!",
-				.Type = "//static_assert(false, \"FName::ToString causes memory-leak. Read comment above!\")", .Name = NameArrayName, .Offset = 0x0, .Size = 0x4, .ArrayDim = 0x0, .Alignment = 0x4,
+				//.Type = "//static_assert(false, \"FName::ToString causes memory-leak. Read comment above!\")", .Name = NameArrayName, .Offset = 0x0, .Size = 0x4, .ArrayDim = 0x0, .Alignment = 0x4,
 				.bIsStatic = true, .bIsZeroSizeMember = true, .bIsBitField = false, .BitIndex = 0xFF, .DefaultValue = "nullptr"
 			},
 		});

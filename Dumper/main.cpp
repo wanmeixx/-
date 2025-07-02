@@ -25,7 +25,7 @@ enum class EFortToastType : uint8
 // 将模板函数移到全局范围
 template<typename T>
 void GenerateWithRetry(const char* generatorName, bool consoleVisible) {
-    const int maxRetries = 10;
+    const int maxRetries = 3;
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             if (consoleVisible)
@@ -47,6 +47,79 @@ void GenerateWithRetry(const char* generatorName, bool consoleVisible) {
     }
 }
 
+
+
+DWORD Start(HMODULE Module)
+{
+    AllocConsole();
+    FILE* Dummy;
+    freopen_s(&Dummy, "CONOUT$", "w", stderr);
+    freopen_s(&Dummy, "CONIN$", "r", stdin);
+
+    auto t_1 = std::chrono::high_resolution_clock::now();
+
+    std::cerr << "Started Generation [Dumper-7]!\n";
+
+    Settings::Config::Load();
+
+    if (Settings::Config::SleepTimeout > 0)
+    {
+        std::cerr << "Sleeping for " << Settings::Config::SleepTimeout << "ms...\n";
+        Sleep(Settings::Config::SleepTimeout);
+    }
+
+    Generator::InitEngineCore();
+    Generator::InitInternal();
+
+    if (Settings::Generator::GameName.empty() && Settings::Generator::GameVersion.empty())
+    {
+        // Only Possible in Main()
+        FString Name;
+        FString Version;
+        UEClass Kismet = ObjectArray::FindClassFast("KismetSystemLibrary");
+        UEFunction GetGameName = Kismet.GetFunction("KismetSystemLibrary", "GetGameName");
+        UEFunction GetEngineVersion = Kismet.GetFunction("KismetSystemLibrary", "GetEngineVersion");
+
+        Kismet.ProcessEvent(GetGameName, &Name);
+        Kismet.ProcessEvent(GetEngineVersion, &Version);
+
+        Settings::Generator::GameName = Name.ToString();
+        Settings::Generator::GameVersion = Version.ToString();
+    }
+
+    std::cerr << "GameName: " << Settings::Generator::GameName << "\n";
+    std::cerr << "GameVersion: " << Settings::Generator::GameVersion << "\n\n";
+
+    Generator::Generate<CppGenerator>();
+    Generator::Generate<MappingGenerator>();
+    Generator::Generate<IDAMappingGenerator>();
+    Generator::Generate<DumpspaceGenerator>();
+
+
+    auto t_C = std::chrono::high_resolution_clock::now();
+
+    auto ms_int_ = std::chrono::duration_cast<std::chrono::milliseconds>(t_C - t_1);
+    std::chrono::duration<double, std::milli> ms_double_ = t_C - t_1;
+
+    std::cerr << "\n\nGenerating SDK took (" << ms_double_.count() << "ms)\n\n\n";
+
+    while (true)
+    {
+        if (GetAsyncKeyState(VK_F6) & 1)
+        {
+            fclose(stdout);
+            if (Dummy) fclose(Dummy);
+            FreeConsole();
+
+            FreeLibraryAndExitThread(Module, 0);
+        }
+
+        Sleep(100);
+    }
+
+    return 0;
+}
+
 void APIENTRY MainThread(HMODULE hInst)
 {
     bool isInitialized = false;
@@ -58,74 +131,14 @@ void APIENTRY MainThread(HMODULE hInst)
         // F6 开始执行dump功能
         if (GetAsyncKeyState(VK_F6) & 1 && !isInitialized)
         {
-            AllocConsole();
-            freopen_s(&fp, "CONOUT$", "w", stdout);
-            consoleVisible = true;
-            std::cout << "[Dumper] Press F10 to start dumping\n";
-
-            auto t_1 = std::chrono::high_resolution_clock::now();
-
-            if (consoleVisible)
-                std::cout << "Started Generation [Dumper-7]!\n";
-
-            Generator::InitEngineCore();
-            Generator::InitInternal();
-
-            if (Settings::Generator::GameName.empty() && Settings::Generator::GameVersion.empty())
-            {
-                FString Name;
-                FString Version;
-                UEClass Kismet = ObjectArray::FindClassFast("KismetSystemLibrary");
-                UEFunction GetGameName = Kismet.GetFunction("KismetSystemLibrary", "GetGameName");
-                UEFunction GetEngineVersion = Kismet.GetFunction("KismetSystemLibrary", "GetEngineVersion");
-
-                Kismet.ProcessEvent(GetGameName, &Name);
-                Kismet.ProcessEvent(GetEngineVersion, &Version);
-
-                Settings::Generator::GameName = Name.ToString();
-                Settings::Generator::GameVersion = Version.ToString();
-            }
-
-            if (consoleVisible) {
-                std::cout << "GameName: " << Settings::Generator::GameName << "\n";
-                std::cout << "GameVersion: " << Settings::Generator::GameVersion << "\n\n";
-            }
-
-            // 调用生成器
-            GenerateWithRetry<CppGenerator>("CppGenerator", consoleVisible);
-            try {
-                GenerateWithRetry<MappingGenerator>("MappingGenerator", consoleVisible);
-                GenerateWithRetry<IDAMappingGenerator>("IDAMappingGenerator", consoleVisible);
-                GenerateWithRetry<DumpspaceGenerator>("DumpspaceGenerator", consoleVisible);
-            }
-            catch (...)
-            {
-                std::cout << "未知异常,生成失败了: " << "\n\n";
-            }
-            auto t_C = std::chrono::high_resolution_clock::now();
-            auto ms_double_ = std::chrono::duration<double, std::milli>(t_C - t_1);
-
-            if (consoleVisible)
-                std::cout << "\n\nGenerating SDK took (" << ms_double_.count() / 1000 / 60 << "mins)\n\n\n";
-
+            Start(hInst);
             isInitialized = true;
         }
-
         Sleep(10);
     }
-
-    // 清理控制台
-    if (consoleVisible)
-    {
-        if (fp)
-        {
-            fclose(fp);
-        }
-        FreeConsole();
-    }
-
     return;
 }
+
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
