@@ -55,12 +55,12 @@ std::string CppGenerator::MakeMemberStringWithoutName(const std::string& Type)
 
 std::string CppGenerator::GenerateBytePadding(const int32 Offset, const int32 PadSize, std::string&& Reason)
 {
-	return MakeMemberString("uint8", std::format("Pad_{:X}[0x{:X}]", Offset, PadSize), std::format("0x{:04X}(0x{:04X})({})", Offset, PadSize, std::move(Reason)));
+	return MakeMemberString("uint8", std::format("Pad_{:X}[0x{:X}]", Offset, PadSize), std::format("0x{:04X}(0x{:04X})", Offset, PadSize));
 }
 
 std::string CppGenerator::GenerateBitPadding(uint8 UnderlayingSizeBytes, const uint8 PrevBitPropertyEndBit, const int32 Offset, const int32 PadSize, std::string&& Reason)
 {
-	return MakeMemberString(GetTypeFromSize(UnderlayingSizeBytes), std::format("BitPad_{:X}_{:X} : {:X}", Offset, PrevBitPropertyEndBit, PadSize), std::format("0x{:04X}(0x{:04X})({})", Offset, UnderlayingSizeBytes, std::move(Reason)));
+	return MakeMemberString(GetTypeFromSize(UnderlayingSizeBytes), std::format("BitPad_{:X}_{:X} : {:X}", Offset, PrevBitPropertyEndBit, PadSize), std::format("0x{:04X}(0x{:04X})", Offset, UnderlayingSizeBytes));
 }
 
 std::string CppGenerator::GenerateMembers(const StructWrapper& Struct, const MemberManager& Members, int32 SuperSize, int32 SuperLastMemberEnd, int32 SuperAlign, int32 PackageIndex)
@@ -117,7 +117,7 @@ std::string CppGenerator::GenerateMembers(const StructWrapper& Struct, const Mem
 
 		const int32 CurrentPropertyEnd = MemberOffset + MemberSize;
 
-		std::string Comment = std::format("0x{:04X}(0x{:04X})({})", MemberOffset, MemberSize, Member.GetFlagsOrCustomComment());
+		std::string Comment = std::format("0x{:04X}(0x{:04X})", MemberOffset, MemberSize);
 
 		const bool bIsBitField = Member.IsBitField();
 
@@ -141,7 +141,7 @@ std::string CppGenerator::GenerateMembers(const StructWrapper& Struct, const Mem
 			if (CurrentPropertyEnd > PrevPropertyEnd)
 				PrevBitPropertyEndBit = 0x0;
 
-			std::string BitfieldInfoComment = std::format("BitIndex: 0x{:02X}, PropSize: 0x{:04X} ({})", BitFieldIndex, MemberSize, Member.GetFlagsOrCustomComment());
+			std::string BitfieldInfoComment = std::format("BitIndex: 0x{:02X}, PropSize: 0x{:04X}", BitFieldIndex, MemberSize);
 			Comment = std::format("0x{:04X}(0x{:04X})({})", MemberOffset, MemberSize, BitfieldInfoComment);
 
 			if (PrevBitPropertyEnd < MemberOffset)
