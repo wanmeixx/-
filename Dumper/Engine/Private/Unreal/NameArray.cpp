@@ -398,81 +398,19 @@ bool NameArray::TryFindNameArray()
 
 bool NameArray::TryFindNamePool()
 {
-	/* Number of bytes we want to search for an indirect call to InitializeSRWLock */
-	constexpr int32 InitSRWLockSearchRange = 0x50;
+	uintptr_t Address = reinterpret_cast<uintptr_t>(FindPattern("48 8D 54 24 28 48 89 4C 24 20 C7 44 24 28 0F 00 00 00 89 44 24 2C E8", 0, true, 0));
 
-	/* Number of bytes we want to search for lea instruction loading the string "ByteProperty" */
-	constexpr int32 BytePropertySearchRange = 0x2A0;
+	if (!Address)
+		return false;
 
-	/* FNamePool::FNamePool contains a call to InitializeSRWLock or RtlInitializeSRWLock, we're going to check for that later */
-	//uintptr_t InitSRWLockAddress = reinterpret_cast<uintptr_t>(GetImportAddress(nullptr, "kernel32.dll", "InitializeSRWLock"));
-	uintptr_t InitSRWLockAddress = reinterpret_cast<uintptr_t>(GetAddressOfImportedFunctionFromAnyModule("kernel32.dll", "InitializeSRWLock"));
-	uintptr_t RtlInitSRWLockAddress = reinterpret_cast<uintptr_t>(GetAddressOfImportedFunctionFromAnyModule("ntdll.dll", "RtlInitializeSRWLock"));
+	uintptr_t GNamesAddress = ASMUtils::Resolve32BitRelativeMove(Address + 0x9D);
 
-	/* Singleton instance of FNamePool, which is passed as a parameter to FNamePool::FNamePool */
-	void* NamePoolIntance = nullptr;
+	if (!IsInProcessRange(GNamesAddress))
+		return false;
 
-	uintptr_t SigOccurrence = 0x0;;
+	Off::InSDK::NameArray::GNames = GetOffset(reinterpret_cast<void*>(GNamesAddress));
 
-	uintptr_t Counter = 0x0;
-
-	while (!NamePoolIntance)
-	{
-		/* add 0x1 so we don't find the same occurence again and cause an infinite loop (20min. of debugging for that) */
-		if (SigOccurrence > 0x0)
-			SigOccurrence += 0x1;
-
-		/* Find the next occurence of this signature to see if that may be a call to the FNamePool constructor */
-		SigOccurrence = reinterpret_cast<uintptr_t>(FindPattern("48 8D 0D ? ? ? ? E8", 0x0, true, SigOccurrence));
-
-		if (SigOccurrence == 0x0)
-			break;
-
-		constexpr int32 SizeOfMovInstructionBytes = 0x7;
-
-		const uintptr_t PossibleConstructorAddress = ASMUtils::Resolve32BitRelativeCall(SigOccurrence + SizeOfMovInstructionBytes);
-
-		if (!IsInProcessRange(PossibleConstructorAddress))
-			continue;
-
-		for (int i = 0; i < InitSRWLockSearchRange; i++)
-		{
-			/* Check for a relative call with the opcodes FF 15 00 00 00 00 */
-			if (*reinterpret_cast<uint16*>(PossibleConstructorAddress + i) != 0x15FF)
-				continue;
-
-			const uintptr_t RelativeCallTarget = ASMUtils::Resolve32BitSectionRelativeCall(PossibleConstructorAddress + i);
-
-			if (!IsInProcessRange(RelativeCallTarget))
-				continue;
-
-			const uintptr_t ValueOfCallTarget = *reinterpret_cast<uintptr_t*>(RelativeCallTarget);
-
-			if (ValueOfCallTarget != InitSRWLockAddress && ValueOfCallTarget != RtlInitSRWLockAddress)
-				continue;
-
-			/* Try to find the "ByteProperty" string, as it's always referenced in FNamePool::FNamePool, so we use it to verify that we got the right function */
-			MemAddress StringRef = FindByStringInAllSections(L"ByteProperty", PossibleConstructorAddress, BytePropertySearchRange);
-
-			/* We couldn't find a wchar_t string L"ByteProperty", now see if we can find a char string "ByteProperty" */
-			if (!StringRef)
-				StringRef = FindByStringInAllSections("ByteProperty", PossibleConstructorAddress, BytePropertySearchRange);
-
-			if (StringRef)
-			{
-				NamePoolIntance = reinterpret_cast<void*>(ASMUtils::Resolve32BitRelativeMove(SigOccurrence));
-				break;
-			}
-		}
-	}
-
-	if (NamePoolIntance)
-	{
-		Off::InSDK::NameArray::GNames = GetOffset(NamePoolIntance);
-		return true;
-	}
-
-	return false;
+	return true;
 }
 
 bool NameArray::TryInit(bool bIsTestOnly)
