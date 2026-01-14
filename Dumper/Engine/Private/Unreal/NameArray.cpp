@@ -405,12 +405,21 @@ bool NameArray::TryFindNamePool()
 
 	uintptr_t GNamesAddress = ASMUtils::Resolve32BitRelativeMove(Address + 0x9D);
 
-	if (!IsInProcessRange(GNamesAddress))
-		return false;
+	if (IsInProcessRange(GNamesAddress))
+	{
+		Off::InSDK::NameArray::GNames = GetOffset(reinterpret_cast<void*>(GNamesAddress));
+		return true;
+	}
 
-	Off::InSDK::NameArray::GNames = GetOffset(reinterpret_cast<void*>(GNamesAddress));
+	GNamesAddress = ASMUtils::Resolve32BitRelativeMove(Address + 0xB0);
 
-	return true;
+	if (IsInProcessRange(GNamesAddress))
+	{
+		Off::InSDK::NameArray::GNames = GetOffset(reinterpret_cast<void*>(GNamesAddress));
+		return true;
+	}
+
+	return false;
 }
 
 bool NameArray::TryInit(bool bIsTestOnly)
