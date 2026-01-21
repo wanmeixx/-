@@ -2457,7 +2457,7 @@ R"({
 	PredefinedElements& UWorldPredefs = PredefinedMembers[ObjectArray::FindClassFast("World").GetIndex()];
 
 	constexpr const char* GetWorldThroughGWorldCode = R"(
-	if constexpr (Offsets::GWorld != 0)
+	if (Offsets::GWorld != 0)
 		return *reinterpret_cast<UWorld**>(InSDKUtils::GetImageBase() + Offsets::GWorld);
 )";
 
@@ -2933,12 +2933,12 @@ using namespace UC;
 */
 namespace Offsets
 {{
-	constexpr int32 GObjects          = 0x{:08X};
-	constexpr int32 AppendString      = 0x{:08X};
-	constexpr int32 GNames            = 0x{:08X};
-	constexpr int32 GWorld            = 0x{:08X};
-	constexpr int32 ProcessEvent      = 0x{:08X};
-	constexpr int32 ProcessEventIdx   = 0x{:08X};
+	inline  int32 GObjects          = 0x{:08X};
+	inline  int32 AppendString      = 0x{:08X};
+	inline  int32 GNames            = 0x{:08X};
+	inline  int32 GWorld            = 0x{:08X};
+	inline  int32 ProcessEvent      = 0x{:08X};
+	inline  int32 ProcessEventIdx   = 0x{:08X};
 }}
 )", Off::InSDK::ObjArray::GObjects, Off::InSDK::Name::AppendNameToString, Off::InSDK::NameArray::GNames, Off::InSDK::World::GWorld, Off::InSDK::ProcessEvent::PEOffset, Off::InSDK::ProcessEvent::PEIndex);
 
@@ -3709,7 +3709,7 @@ R"({
 R"({
 	if (IsWide())
 	{
-		return UtfN::Utf16StringToUtf8String<std::string>(Name.WideName, Header.Len);
+		return UtfN::Utf16StringToUtf8String<std::string>(Name.WideName, static_cast<int>(Header.Len));
 	}
 
 	return std::string(Name.AnsiName, Header.Len);
