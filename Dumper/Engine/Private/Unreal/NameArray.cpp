@@ -400,23 +400,36 @@ bool NameArray::TryFindNamePool()
 {
 	uintptr_t Address = reinterpret_cast<uintptr_t>(FindPattern("48 8D 54 24 28 48 89 4C 24 20 C7 44 24 28 0F 00 00 00 89 44 24 2C E8", 0, true, 0));
 
-	if (!Address)
-		return false;
-
-	uintptr_t GNamesAddress = ASMUtils::Resolve32BitRelativeMove(Address + 0x9D);
-
-	if (IsInProcessRange(GNamesAddress))
+	if (Address)
 	{
-		Off::InSDK::NameArray::GNames = GetOffset(reinterpret_cast<void*>(GNamesAddress));
-		return true;
+		uintptr_t GNamesAddress = ASMUtils::Resolve32BitRelativeMove(Address + 0x9D);
+
+		if (IsInProcessRange(GNamesAddress))
+		{
+			Off::InSDK::NameArray::GNames = GetOffset(reinterpret_cast<void*>(GNamesAddress));
+			return true;
+		}
+
+		GNamesAddress = ASMUtils::Resolve32BitRelativeMove(Address + 0xB0);
+
+		if (IsInProcessRange(GNamesAddress))
+		{
+			Off::InSDK::NameArray::GNames = GetOffset(reinterpret_cast<void*>(GNamesAddress));
+			return true;
+		}
 	}
 
-	GNamesAddress = ASMUtils::Resolve32BitRelativeMove(Address + 0xB0);
+	Address = reinterpret_cast<uintptr_t>(FindPattern("C7 44 24 38 ?? 00 00 00 48 89 4C 24 30 48 8D 54 24 28 0F 28 44 24 30 66 0F 7F 44 24 20 E8", 0, true, 0));
 
-	if (IsInProcessRange(GNamesAddress))
+	if (Address)
 	{
-		Off::InSDK::NameArray::GNames = GetOffset(reinterpret_cast<void*>(GNamesAddress));
-		return true;
+		uintptr_t GNamesAddress = ASMUtils::Resolve32BitRelativeMove(Address + 0xA4);
+
+		if (IsInProcessRange(GNamesAddress))
+		{
+			Off::InSDK::NameArray::GNames = GetOffset(reinterpret_cast<void*>(GNamesAddress));
+			return true;
+		}
 	}
 
 	return false;
