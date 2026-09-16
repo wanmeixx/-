@@ -475,13 +475,21 @@ void DumpspaceGenerator::Generate()
 		*/
 		for (int32 EnumIdx : Package.GetEnums())
 		{
-			DSGen::EnumHolder Enum = GenerateEnum(ObjectArray::GetByIndex<UEEnum>(EnumIdx));
+			UEEnum UnrealEnum = ObjectArray::GetByIndex<UEEnum>(EnumIdx);
+			if (!UnrealEnum)
+				continue;
+
+			DSGen::EnumHolder Enum = GenerateEnum(UnrealEnum);
 			DSGen::bakeEnum(Enum);
 		}
 
 		DependencyManager::OnVisitCallbackType GenerateClassOrStructCallback = [&](int32 Index) -> void
 		{
-			DSGen::ClassHolder StructOrClass = GenerateStruct(ObjectArray::GetByIndex<UEStruct>(Index));
+			UEStruct UnrealStruct = ObjectArray::GetByIndex<UEStruct>(Index);
+			if (!UnrealStruct)
+				return;
+
+			DSGen::ClassHolder StructOrClass = GenerateStruct(UnrealStruct);
 			DSGen::bakeStructOrClass(StructOrClass);
 		};
 

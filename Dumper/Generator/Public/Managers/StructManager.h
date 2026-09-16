@@ -27,6 +27,11 @@ struct StructInfo
 {
 	HashStringTableIndex Name;
 
+	/* Snapshot data used after the live UObject array may have changed. */
+	int32 PackageIndex = -1;
+	bool bIsClass = false;
+	bool bIsFunction = false;
+
 	/* End of the last member-variable of this struct, used to calculate implicit trailing padding */
 	int32 LastMemberEnd = 0x0;
 
@@ -55,13 +60,15 @@ class StructManager;
 class StructInfoHandle
 {
 private:
-	const StructInfo* Info;
+	const StructInfo* Info = nullptr;
 
 public:
 	StructInfoHandle() = default;
 	StructInfoHandle(const StructInfo& InInfo);
 
 public:
+	bool IsValid() const { return Info != nullptr; }
+
 	int32 GetLastMemberEnd() const;
 	int32 GetSize() const;
 	int32 GetUnalignedSize() const;
@@ -131,7 +138,8 @@ public:
 		if (!Struct)
 			return {};
 
-		return StructInfoOverrides.at(Struct.GetIndex());
+		auto It = StructInfoOverrides.find(Struct.GetIndex());
+		return It != StructInfoOverrides.end() ? StructInfoHandle(It->second) : StructInfoHandle{};
 	}
 
 	static inline bool IsStructCyclicWithPackage(int32 StructIndex, int32 PackageIndex)

@@ -607,7 +607,7 @@ void NameArray::PostInit()
 		}
 		Off::InSDK::NameArray::FNamePoolBlockOffsetBits = NameArray::FNameBlockOffsetBits;
 
-		std::cout << "NameArray::FNameBlockOffsetBits: 0x" << std::hex << NameArray::FNameBlockOffsetBits << "\n" << std::endl;
+		std::cout << "NameArray::FNameBlockOffsetBits: 0x" << std::hex << NameArray::FNameBlockOffsetBits << std::dec << "\n" << std::endl;
 	}
 }
 

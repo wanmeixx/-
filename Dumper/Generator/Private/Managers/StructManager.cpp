@@ -69,6 +69,9 @@ void StructManager::InitAlignmentsAndNames()
 		// Add name to override info
 		StructInfo& NewOrExistingInfo = StructInfoOverrides[Obj.GetIndex()];
 		NewOrExistingInfo.Name = UniqueNameTable.FindOrAdd(Obj.GetCppName(), !Obj.IsA(EClassCastFlags::Function)).first;
+		NewOrExistingInfo.PackageIndex = ObjAsStruct.GetPackageIndex();
+		NewOrExistingInfo.bIsClass = Obj.IsA(EClassCastFlags::Class);
+		NewOrExistingInfo.bIsFunction = Obj.IsA(EClassCastFlags::Function);
 
 		// Interfaces inherit from UObject by default, but as a workaround to no virtual-inheritance we make them empty
 		if (ObjAsStruct.HasType(InterfaceClass))

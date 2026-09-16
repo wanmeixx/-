@@ -781,6 +781,12 @@ enum class {} : {}
 
 std::string CppGenerator::GetStructPrefixedName(const StructWrapper& Struct)
 {
+	if (!Struct.IsValid())
+	{
+		UEStruct UnrealStruct = Struct.GetUnrealStruct();
+		return UnrealStruct ? UnrealStruct.GetCppName() : "UnknownStruct";
+	}
+
 	if (Struct.IsFunction())
 		return Struct.GetUnrealStruct().GetOuter().GetValidName() + "_" + Struct.GetName();
 
@@ -789,19 +795,29 @@ std::string CppGenerator::GetStructPrefixedName(const StructWrapper& Struct)
 	if (bIsUnique) [[likely]]
 		return ValidName;
 
-	/* Package::FStructName */
-	return PackageManager::GetName(Struct.GetUnrealStruct().GetPackageIndex()) + "::" + ValidName;
+	/* Package::FStructName. A referenced type may have been loaded after manager initialization. */
+	const auto& PackageInfos = PackageManager::GetPackageInfos();
+	auto PackageIt = PackageInfos.find(Struct.GetUnrealStruct().GetPackageIndex());
+	return PackageIt != PackageInfos.end() ? PackageInfoHandle(PackageIt->second).GetName() + "::" + ValidName : ValidName;
 }
 
 std::string CppGenerator::GetEnumPrefixedName(const EnumWrapper& Enum)
 {
+	if (!Enum.IsValid())
+	{
+		UEEnum UnrealEnum = Enum.GetUnrealEnum();
+		return UnrealEnum ? UnrealEnum.GetEnumPrefixedName() : "UnknownEnum";
+	}
+
 	auto [ValidName, bIsUnique] = Enum.GetUniqueName();
 
 	if (bIsUnique) [[likely]]
 		return ValidName;
 
-	/* Package::ESomeEnum */
-	return PackageManager::GetName(Enum.GetUnrealEnum().GetPackageIndex()) + "::" + ValidName;
+	/* Package::ESomeEnum. A referenced type may have been loaded after manager initialization. */
+	const auto& PackageInfos = PackageManager::GetPackageInfos();
+	auto PackageIt = PackageInfos.find(Enum.GetUnrealEnum().GetPackageIndex());
+	return PackageIt != PackageInfos.end() ? PackageInfoHandle(PackageIt->second).GetName() + "::" + ValidName : ValidName;
 }
 
 std::string CppGenerator::GetEnumUnderlayingType(const EnumWrapper& Enum)
@@ -817,7 +833,11 @@ std::string CppGenerator::GetEnumUnderlayingType(const EnumWrapper& Enum)
 		"uint64"
 	};
 
-	return Enum.GetUnderlyingTypeSize() <= 0x8 ? UnderlayingTypesBySize[static_cast<size_t>(Enum.GetUnderlyingTypeSize()) - 1] : "uint8";
+	if (!Enum.IsValid())
+		return "uint8";
+
+	const uint8 UnderlyingTypeSize = Enum.GetUnderlyingTypeSize();
+	return UnderlyingTypeSize > 0 && UnderlyingTypeSize <= 0x8 ? UnderlayingTypesBySize[static_cast<size_t>(UnderlyingTypeSize) - 1] : "uint8";
 }
 
 std::string CppGenerator::GetCycleFixupType(const StructWrapper& Struct, bool bIsForInheritance)
@@ -1129,13 +1149,45 @@ std::unordered_map<std::string, UEProperty> CppGenerator::GetUnknownProperties()
 
 		for (UEProperty Prop : Obj.Cast<UEStruct>().GetProperties())
 		{
-			std::string TypeName = GetMemberTypeString(Prop);
-
 			auto [Class, FieldClass] = Prop.GetClass();
+			if (!Class && !FieldClass)
+				continue;
 
-			/* Relies on unknown names being post-fixed with an underscore by 'GetMemberTypeString()' */
-			if (TypeName.back() == '_')
-				PropertiesWithNames[TypeName] = Prop;
+			const EClassCastFlags Flags = Class ? Class.GetCastFlags() : FieldClass.GetCastFlags();
+			const bool bIsKnownProperty =
+				Flags & EClassCastFlags::ByteProperty ||
+				Flags & EClassCastFlags::UInt16Property ||
+				Flags & EClassCastFlags::UInt32Property ||
+				Flags & EClassCastFlags::UInt64Property ||
+				Flags & EClassCastFlags::Int8Property ||
+				Flags & EClassCastFlags::Int16Property ||
+				Flags & EClassCastFlags::IntProperty ||
+				Flags & EClassCastFlags::Int64Property ||
+				Flags & EClassCastFlags::FloatProperty ||
+				Flags & EClassCastFlags::DoubleProperty ||
+				Flags & EClassCastFlags::ClassProperty ||
+				Flags & EClassCastFlags::NameProperty ||
+				Flags & EClassCastFlags::StrProperty ||
+				Flags & EClassCastFlags::TextProperty ||
+				Flags & EClassCastFlags::BoolProperty ||
+				Flags & EClassCastFlags::StructProperty ||
+				Flags & EClassCastFlags::ArrayProperty ||
+				Flags & EClassCastFlags::WeakObjectProperty ||
+				Flags & EClassCastFlags::LazyObjectProperty ||
+				Flags & EClassCastFlags::SoftClassProperty ||
+				Flags & EClassCastFlags::SoftObjectProperty ||
+				Flags & EClassCastFlags::ObjectProperty ||
+				Flags & EClassCastFlags::MapProperty ||
+				Flags & EClassCastFlags::SetProperty ||
+				Flags & EClassCastFlags::EnumProperty ||
+				Flags & EClassCastFlags::InterfaceProperty ||
+				Flags & EClassCastFlags::DelegateProperty ||
+				Flags & EClassCastFlags::MulticastInlineDelegateProperty ||
+				Flags & EClassCastFlags::FieldPathProperty ||
+				Flags & EClassCastFlags::OptionalProperty;
+
+			if (!bIsKnownProperty)
+				PropertiesWithNames[(Class ? Class.GetCppName() : FieldClass.GetCppName()) + "_"] = Prop;
 		}
 	}
 
@@ -1165,7 +1217,11 @@ void CppGenerator::GenerateEnumFwdDeclarations(StreamType& ClassOrStructFile, Pa
 		if (bIsForClassFile != bIsClassFile)
 			continue;
 
-		EnumWrapper Enum = EnumWrapper(ObjectArray::GetByIndex<UEEnum>(EnumIndex));
+		UEEnum UnrealEnum = ObjectArray::GetByIndex<UEEnum>(EnumIndex);
+		if (!UnrealEnum)
+			continue;
+
+		EnumWrapper Enum = EnumWrapper(UnrealEnum);
 
 		ClassOrStructFile << std::format("enum class {} : {};\n", GetEnumPrefixedName(Enum), GetEnumUnderlayingType(Enum));
 	}
@@ -1184,30 +1240,35 @@ void CppGenerator::GenerateNameCollisionsInl(StreamType& NameCollisionsFile)
 
 	for (const auto& [Index, Info] : StructInfoMap)
 	{
-		if (StructManager::IsStructNameUnique(Info.Name))
+		if (StructManager::IsStructNameUnique(Info.Name) || Info.bIsFunction || Info.PackageIndex == -1)
 			continue;
 
-		UEStruct Struct = ObjectArray::GetByIndex<UEStruct>(Index);
+		auto& [ForwardDeclarations, Count] = PackagesAndForwardDeclarations[Info.PackageIndex];
 
-		if (Struct.IsA(EClassCastFlags::Function))
-			continue;
-
-		auto& [ForwardDeclarations, Count] = PackagesAndForwardDeclarations[Struct.GetPackageIndex()];
-
-		ForwardDeclarations += std::format("\t{} {};\n", Struct.IsA(EClassCastFlags::Class) ? "class" : "struct", Struct.GetCppName());
+		ForwardDeclarations += std::format("\t{} {};\n", Info.bIsClass ? "class" : "struct", StructManager::GetName(Info.Name));
 		Count++;
 	}
+
+	static constexpr std::array<const char*, 8> UnderlyingTypesBySize = {
+		"uint8", "uint16", "InvalidEnumSize", "uint32",
+		"InvalidEnumSize", "InvalidEnumSize", "InvalidEnumSize", "uint64"
+	};
 
 	for (const auto& [Index, Info] : EnumInfoMap)
 	{
 		if (EnumManager::IsEnumNameUnique(Info))
 			continue;
 
-		UEEnum Enum = ObjectArray::GetByIndex<UEEnum>(Index);
+		const EnumInfoHandle InfoHandle(Info);
+		const int32 PackageIndex = InfoHandle.GetPackageIndex();
+		const uint8 UnderlyingTypeSize = InfoHandle.GetUnderlyingTypeSize();
+		if (PackageIndex == -1)
+			continue;
 
-		auto& [ForwardDeclarations, Count] = PackagesAndForwardDeclarations[Enum.GetPackageIndex()];
+		auto& [ForwardDeclarations, Count] = PackagesAndForwardDeclarations[PackageIndex];
 
-		ForwardDeclarations += std::format("\tenum class {} : {};\n", Enum.GetEnumPrefixedName(), GetEnumUnderlayingType(Enum));
+		ForwardDeclarations += std::format("\tenum class {} : {};\n", InfoHandle.GetName().GetName(),
+			UnderlyingTypeSize > 0 && UnderlyingTypeSize <= 0x8 ? UnderlyingTypesBySize[static_cast<size_t>(UnderlyingTypeSize) - 1] : "uint8");
 		Count++;
 	}
 
@@ -1216,7 +1277,12 @@ void CppGenerator::GenerateNameCollisionsInl(StreamType& NameCollisionsFile)
 	for (const auto& [PackageIndex, ForwardDeclarations] : PackagesAndForwardDeclarations)
 	{
 		std::string ForwardDeclString = ForwardDeclarations.first.substr(0, ForwardDeclarations.first.size() - 1);
-		std::string PackageName = PackageManager::GetName(PackageIndex);
+		const auto& PackageInfos = PackageManager::GetPackageInfos();
+		auto PackageIt = PackageInfos.find(PackageIndex);
+		if (PackageIt == PackageInfos.end())
+			continue;
+
+		std::string PackageName = PackageInfoHandle(PackageIt->second).GetName();
 
 		/* Only print packages with a single forward declaration at first */
 		if (ForwardDeclarations.second > 1)
@@ -1258,7 +1324,11 @@ void CppGenerator::GenerateDebugAssertions(StreamType& AssertionStream)
 	{
 		DependencyManager::OnVisitCallbackType GenerateStructAssertionsCallback = [&AssertionStream](int32 Index) -> void
 		{
-			StructWrapper Struct = ObjectArray::GetByIndex<UEStruct>(Index);
+			UEStruct UnrealStruct = ObjectArray::GetByIndex<UEStruct>(Index);
+			if (!UnrealStruct)
+				return;
+
+			StructWrapper Struct = UnrealStruct;
 
 			std::string UniquePrefixedName = GetStructPrefixedName(Struct);
 
@@ -1561,7 +1631,9 @@ void CppGenerator::Generate()
 		*/
 		for (int32 EnumIdx : Package.GetEnums())
 		{
-			GenerateEnum(ObjectArray::GetByIndex<UEEnum>(EnumIdx), StructsFile);
+			UEEnum Enum = ObjectArray::GetByIndex<UEEnum>(EnumIdx);
+			if (Enum)
+				GenerateEnum(Enum, StructsFile);
 		}
 
 		if (Package.HasStructs())
@@ -1570,7 +1642,9 @@ void CppGenerator::Generate()
 
 			DependencyManager::OnVisitCallbackType GenerateStructCallback = [&](int32 Index) -> void
 			{
-				GenerateStruct(ObjectArray::GetByIndex<UEStruct>(Index), StructsFile, FunctionsFile, ParametersFile, PackageIndex);
+				UEStruct Struct = ObjectArray::GetByIndex<UEStruct>(Index);
+				if (Struct)
+					GenerateStruct(Struct, StructsFile, FunctionsFile, ParametersFile, PackageIndex);
 			};
 
 			Structs.VisitAllNodesWithCallback(GenerateStructCallback);
@@ -1582,7 +1656,9 @@ void CppGenerator::Generate()
 
 			DependencyManager::OnVisitCallbackType GenerateClassCallback = [&](int32 Index) -> void
 			{
-				GenerateStruct(ObjectArray::GetByIndex<UEStruct>(Index), ClassesFile, FunctionsFile, ParametersFile, PackageIndex);
+				UEStruct Class = ObjectArray::GetByIndex<UEStruct>(Index);
+				if (Class)
+					GenerateStruct(Class, ClassesFile, FunctionsFile, ParametersFile, PackageIndex);
 			};
 
 			Classes.VisitAllNodesWithCallback(GenerateClassCallback);

@@ -50,6 +50,6 @@ CollisionInfoIterator EnumWrapper::GetMembers() const
 
 bool EnumWrapper::IsValid() const
 {
-    return Enum != nullptr;
+	return Enum != nullptr && InfoHandle.IsValid();
 }
 

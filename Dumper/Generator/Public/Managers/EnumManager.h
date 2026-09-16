@@ -36,6 +36,9 @@ private:
 	/* Name of this Enum*/
 	HashStringTableIndex Name;
 
+	/* Package captured while the enum is known to be valid. */
+	int32 PackageIndex = -1;
+
 	/* sizeof(UnderlayingType) */
 	uint8 UnderlyingTypeSize = 0x1;
 
@@ -68,13 +71,15 @@ public:
 class EnumInfoHandle
 {
 private:
-	const EnumInfo* Info;
+	const EnumInfo* Info = nullptr;
 
 public:
 	EnumInfoHandle() = default;
 	EnumInfoHandle(const EnumInfo& InInfo);
 
 public:
+	bool IsValid() const { return Info != nullptr; }
+	int32 GetPackageIndex() const;
 	uint8 GetUnderlyingTypeSize() const;
 	const StringEntry& GetName() const;
 
@@ -144,7 +149,8 @@ public:
 		if (!Enum)
 			return {};
 
-		return EnumInfoOverrides.at(Enum.GetIndex());
+		auto It = EnumInfoOverrides.find(Enum.GetIndex());
+		return It != EnumInfoOverrides.end() ? EnumInfoHandle(It->second) : EnumInfoHandle{};
 	}
 };
 

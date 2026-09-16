@@ -115,8 +115,8 @@ bool StructWrapper::IsAClassWithType(UEClass TypeClass) const
 
 bool StructWrapper::IsValid() const
 {
-    // Struct and PredefStruct share the same memory location, if Struct is nullptr so is PredefStruct
-    return PredefStruct != nullptr;
+	// Struct and PredefStruct share the same memory location, if Struct is nullptr so is PredefStruct
+	return PredefStruct != nullptr && (!bIsUnrealStruct || InfoHandle.IsValid());
 }
 
 bool StructWrapper::IsUnrealStruct() const
@@ -126,7 +126,7 @@ bool StructWrapper::IsUnrealStruct() const
 
 bool StructWrapper::IsCyclicWithPackage(int32 PackageIndex) const
 {
-    if (!bIsUnrealStruct || PackageIndex == -1)
+	if (!bIsUnrealStruct || !InfoHandle.IsValid() || PackageIndex == -1)
         return false;
 
     if (!InfoHandle.IsPartOfCyclicPackage())

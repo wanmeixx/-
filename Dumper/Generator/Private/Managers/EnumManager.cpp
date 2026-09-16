@@ -55,6 +55,11 @@ EnumInfoHandle::EnumInfoHandle(const EnumInfo& InInfo)
 {
 }
 
+int32 EnumInfoHandle::GetPackageIndex() const
+{
+	return Info->PackageIndex;
+}
+
 uint8 EnumInfoHandle::GetUnderlyingTypeSize() const
 {
 	return Info->UnderlyingTypeSize;
@@ -138,6 +143,7 @@ void EnumManager::InitInternal()
 			/* Add name to override info */
 			EnumInfo& NewOrExistingInfo = EnumInfoOverrides[Obj.GetIndex()];
 			NewOrExistingInfo.Name = UniqueEnumNameTable.FindOrAdd(ObjAsEnum.GetEnumPrefixedName()).first;
+			NewOrExistingInfo.PackageIndex = ObjAsEnum.GetPackageIndex();
 
 			uint64 EnumMaxValue = 0x0;
 

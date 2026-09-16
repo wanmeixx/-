@@ -319,7 +319,11 @@ std::stringstream MappingGenerator::GenerateFileData()
 
 		for (int32 EnumIdx : Package.GetEnums())
 		{
-			GenerateEnum(ObjectArray::GetByIndex<UEEnum>(EnumIdx), EnumData, NameData);
+			UEEnum Enum = ObjectArray::GetByIndex<UEEnum>(EnumIdx);
+			if (!Enum)
+				continue;
+
+			GenerateEnum(Enum, EnumData, NameData);
 			NumEnums++;
 		}
 	}
@@ -336,7 +340,11 @@ std::stringstream MappingGenerator::GenerateFileData()
 
 		DependencyManager::OnVisitCallbackType GenerateStructCallback = [&](int32 Index) -> void
 		{
-			GenerateStruct(ObjectArray::GetByIndex<UEStruct>(Index), StructData, NameData);
+			UEStruct Struct = ObjectArray::GetByIndex<UEStruct>(Index);
+			if (!Struct)
+				return;
+
+			GenerateStruct(Struct, StructData, NameData);
 			NumStructsAndClasse++;
 		};
 
